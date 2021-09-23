@@ -3,8 +3,9 @@ import os
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
+from flask_bcrypt import Bcrypt
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
@@ -18,9 +19,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
-toolbar = DebugToolbarExtension(app)
+# toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
 
@@ -66,25 +67,24 @@ def signup():
     """
 
     form = UserAddForm()
-
+##########################################################################
+############## updated form handling #####################################
     if form.validate_on_submit():
+        user = User.signup(
+            username=form.username.data,
+            password=form.password.data,
+            email=form.email.data,
+            image_url=form.image_url.data or User.image_url.default.arg,
+            header_image_url=form.header_image_url.data or User.header_image_url.default.arg,
+            bio=form.bio.data)
         try:
-            user = User.signup(
-                username=form.username.data,
-                password=form.password.data,
-                email=form.email.data,
-                image_url=form.image_url.data or User.image_url.default.arg,
-            )
             db.session.commit()
-
         except IntegrityError:
-            flash("Username already taken", 'danger')
+            flash("Username/email already taken. Please pick another", 'danger')
             return render_template('users/signup.html', form=form)
-
+        flash('Welcome! Successfully created your account!', 'primary')
         do_login(user)
-
         return redirect("/")
-
     else:
         return render_template('users/signup.html', form=form)
 
@@ -112,10 +112,12 @@ def login():
 @app.route('/logout')
 def logout():
     """Handle logout of user."""
+##########################################################################
+################  completed logout rout ##################################
     do_logout()
-    flash("You logout successfully")
+    flash("You logout successfully", "secondary")
     return redirect('/login')
- 
+    
 
 
 ##############################################################################
@@ -208,12 +210,34 @@ def stop_following(follow_id):
 
     return redirect(f"/users/{g.user.id}/following")
 
-
-@app.route('/users/profile', methods=["GET", "POST"])
-def profile():
+##########################################################################
+####################### added edit profile handling ######################
+@app.route('/users/<int:user_id>/profile', methods=["GET", "POST"])
+def update_profile(user_id):
     """Update profile for current user."""
+    
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
 
-    # IMPLEMENT THIS
+    user = User.query.get_or_404(user_id)
+    form = UserEditForm(obj=user)
+    if form.validate_on_submit():
+        if Bcrypt().check_password_hash(user.password, form.password.data):
+            user.username=form.username.data
+            user.email=form.email.data
+            user.image_url=form.image_url.data or User.image_url.default.arg
+            user.header_image_url=form.header_image_url.data or User.header_image_url.default.arg
+            user.bio=form.bio.data
+            try:
+                db.session.commit()
+                flash('Successfully updated your profile!', 'primary')
+                return redirect(f"/users/{user_id}")
+            except IntegrityError:
+                flash("Username/email already taken. Please pick another", 'danger')
+        else:
+            flash("Invalid password!", "danger")
+    return render_template("users/edit.html", form=form)
 
 
 @app.route('/users/delete', methods=["POST"])
