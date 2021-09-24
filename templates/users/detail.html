@@ -38,7 +38,7 @@
             {% if g.user.id == user.id %}
             <a href="/users/{{ user.id }}/profile" class="btn btn-outline-secondary">Edit Profile</a>
             <form method="POST" action="/users/delete" class="form-inline">
-              <button class="btn btn-outline-danger ml-2">Delete Profile</button>
+              <button class="btn btn-outline-danger m-2">Delete Profile</button>
             </form>
             {% elif g.user %}
             {% if g.user.is_following(user) %}
@@ -63,7 +63,9 @@
     <h4 id="sidebar-username">@{{ user.username }}</h4>
     <!-- added bio here -->
     <p>{{ user.bio }}</p>
+    {% if user.location %}
     <p class="user-location"><span class="fa fa-map-marker"></span> {{ user.location }}</p>
+    {% endif %}
   </div>
 
   {% block user_details %}

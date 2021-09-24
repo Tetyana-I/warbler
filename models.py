@@ -131,7 +131,7 @@ class User(db.Model):
         return len(found_user_list) == 1
 
     @classmethod
-    def signup(cls, username, email, password, image_url, header_image_url, bio):
+    def signup(cls, username, email, password, image_url, header_image_url, bio, location):
         """Sign up user.
 
         Hashes password and adds user to system.
@@ -145,7 +145,8 @@ class User(db.Model):
             password=hashed_pwd,
             image_url=image_url,
             header_image_url=header_image_url,
-            bio=bio
+            bio=bio,
+            location=location
         )
 
         db.session.add(user)

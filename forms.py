@@ -18,18 +18,7 @@ class UserAddForm(FlaskForm):
     image_url = StringField('(Optional) Image URL')
     header_image_url = StringField('(Optional) Header Image URL')
     bio = StringField('(Optional) Bio')
-
-################# Added edit form ###############################
-class UserEditForm(FlaskForm):
-    """Form for editing users."""
-
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[Length(min=6)])
-    email = StringField('E-mail', validators=[DataRequired(), Email()])
-    image_url = StringField('(Optional) Image URL')
-    header_image_url = StringField('(Optional) Header Image URL')
-    bio = StringField('(Optional) Bio')
-
+    location = StringField('(Optional) Location')
 
 class LoginForm(FlaskForm):
     """Login form."""

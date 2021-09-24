@@ -5,7 +5,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 from flask_bcrypt import Bcrypt
 
-from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
+from forms import UserAddForm, LoginForm, MessageForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
@@ -31,9 +31,13 @@ connect_db(app)
 
 
 @app.before_request
+### Register a function to run before each request.
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
-
+### g is an object provided by Flask. 
+# It is a global namespace for holding any data you want during a single app context.
+# For example, here a before_request handler set g.user, which will be accessible to the route and other functions.
+# An app context lasts for one request / response cycle, g is not appropriate for storing data across requests. 
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
 
@@ -76,7 +80,8 @@ def signup():
             email=form.email.data,
             image_url=form.image_url.data or User.image_url.default.arg,
             header_image_url=form.header_image_url.data or User.header_image_url.default.arg,
-            bio=form.bio.data)
+            bio=form.bio.data,
+            location=form.location.data)
         try:
             db.session.commit()
         except IntegrityError:
@@ -207,7 +212,6 @@ def stop_following(follow_id):
     followed_user = User.query.get(follow_id)
     g.user.following.remove(followed_user)
     db.session.commit()
-
     return redirect(f"/users/{g.user.id}/following")
 
 ##########################################################################
@@ -221,18 +225,19 @@ def update_profile(user_id):
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
-    form = UserEditForm(obj=user)
+    form = UserAddForm(obj=user)
     if form.validate_on_submit():
-        if Bcrypt().check_password_hash(user.password, form.password.data):
+        if Bcrypt().check_password_hash(g.user.password, form.password.data):
             user.username=form.username.data
             user.email=form.email.data
             user.image_url=form.image_url.data or User.image_url.default.arg
             user.header_image_url=form.header_image_url.data or User.header_image_url.default.arg
             user.bio=form.bio.data
+            user.location=form.location.data
             try:
                 db.session.commit()
                 flash('Successfully updated your profile!', 'primary')
-                return redirect(f"/users/{user_id}")
+                return redirect(f"/users/{user.id}")
             except IntegrityError:
                 flash("Username/email already taken. Please pick another", 'danger')
         else:
@@ -248,10 +253,13 @@ def delete_user():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    do_logout()
+    user = User.query.get_or_404(session[CURR_USER_KEY])
+    
 
-    db.session.delete(g.user)
+    # db.session.delete(g.user)
+    db.session.delete(user)
     db.session.commit()
+    do_logout()
 
     return redirect("/signup")
 
@@ -316,10 +324,13 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
-
     if g.user:
+############################################################################################
+############## logged-in user will see his own messages and from followed people  ########## 
+        following_ids = [user.id for user in g.user.following]
         messages = (Message
                     .query
+                    .filter((Message.user_id == g.user.id) | (Message.user_id.in_(following_ids)))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
