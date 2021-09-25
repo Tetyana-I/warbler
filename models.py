@@ -94,7 +94,9 @@ class User(db.Model):
         nullable=False,
     )
 
-    messages = db.relationship('Message')
+##################################################################
+############ fixed relatinship ###################################
+    messages = db.relationship('Message', cascade="all,delete")
 
     followers = db.relationship(
         "User",
@@ -129,6 +131,13 @@ class User(db.Model):
 
         found_user_list = [user for user in self.following if user == other_user]
         return len(found_user_list) == 1
+
+#########################################################################################################
+########### added finction to check if the message is already liked by user #############################
+    def is_liked_message(self, message):
+        """ how many messages user liked """
+        liked_message = [msg for msg in self.likes if msg == message]
+        return len(liked_message) == 1
 
     @classmethod
     def signup(cls, username, email, password, image_url, header_image_url, bio, location):
@@ -201,7 +210,6 @@ class Message(db.Model):
     )
 
     user = db.relationship('User')
-
 
 def connect_db(app):
     """Connect this database to provided Flask app.

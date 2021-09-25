@@ -33,6 +33,13 @@
                 <a href="/users/{{ g.user.id }}/followers">{{ g.user.followers | length }}</a>
               </h4>
             </li>
+            <!-- added likes statistics  -->
+            <li class="stat">
+              <p class="small">Likes</p>
+              <h4>
+                <a href="/users/{{ g.user.id }}/likes">{{ g.user.likes | length }}</a>
+              </h4>
+            </li>
           </ul>
         </div>
       </div>
@@ -42,7 +49,7 @@
       <ul class="list-group" id="messages">
         {% for msg in messages %}
           <li class="list-group-item">
-            <a href="/messages/{{ msg.id  }}" class="message-link"/>
+            <a href="/messages/{{ msg.id  }}" class="message-link">
             <a href="/users/{{ msg.user.id }}">
               <img src="{{ msg.user.image_url }}" alt="" class="timeline-image">
             </a>
@@ -51,15 +58,28 @@
               <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
               <p>{{ msg.text }}</p>
             </div>
-            <form method="POST" action="/users/add_like/{{ msg.id }}" id="messages-form">
-              <button class="
-                btn 
-                btn-sm 
-                {{'btn-primary' if msg.id in likes else 'btn-secondary'}}"
-              >
-                <i class="fa fa-thumbs-up"></i> 
-              </button>
-            </form>
+            <!-- added check if the messages are user's messages -->
+            {% if (msg.user.id != session["curr_user"]) and g.user.is_liked_message(msg) %}
+              <form method="POST" action="/users/{{ g.user.id }}/delete_like/{{ msg.id }}" id="messages-form">
+                <button class="
+                  btn 
+                  btn-sm 
+                  {{'btn-primary' if msg.id in likes else 'btn-secondary'}}"
+                >
+                  <i class="fas fa-heart"></i> 
+                </button>
+              </form>
+            {% elif (msg.user.id != session["curr_user"] and not g.user.is_liked_message(msg)) %}
+              <form method="POST" action="/users/{{ g.user.id }}/add_like/{{ msg.id }}" id="messages-form">
+                <button class="
+                  btn 
+                  btn-sm 
+                  {{'btn-primary' if msg.id in likes else 'btn-secondary'}}"
+                >
+                  <i class="far fa-heart"></i> 
+                </button>
+              </form>
+            {% endif %}
           </li>
         {% endfor %}
       </ul>

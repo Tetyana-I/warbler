@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from flask_bcrypt import Bcrypt
 
 from forms import UserAddForm, LoginForm, MessageForm
-from models import db, connect_db, User, Message
+from models import Likes, db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
 
@@ -237,7 +237,7 @@ def update_profile(user_id):
             try:
                 db.session.commit()
                 flash('Successfully updated your profile!', 'primary')
-                return redirect(f"/users/{user.id}")
+                return redirect(f"/users/{user_id}")
             except IntegrityError:
                 flash("Username/email already taken. Please pick another", 'danger')
         else:
@@ -254,12 +254,10 @@ def delete_user():
         return redirect("/")
 
     user = User.query.get_or_404(session[CURR_USER_KEY])
-    
-
-    # db.session.delete(g.user)
+    do_logout()
     db.session.delete(user)
     db.session.commit()
-    do_logout()
+    flash("User deleted, please sign-up to access Warbler", "danger")
 
     return redirect("/signup")
 
@@ -312,6 +310,43 @@ def messages_destroy(message_id):
 
     return redirect(f"/users/{g.user.id}")
 
+#######################################################################
+############## added likes handling routes ############################
+
+@app.route('/users/<int:user_id>/add_like/<int:msg_id>', methods=['POST'])
+def add_like(user_id, msg_id):
+    """Add like to the message """
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+    
+    liked_message = Likes(user_id = user_id, message_id = msg_id)
+    db.session.add(liked_message)
+    db.session.commit()
+    return redirect(f"/users/{user_id}/likes")        
+
+@app.route('/users/<int:user_id>/delete_like/<int:msg_id>', methods=['POST'])
+def delete_like(user_id, msg_id):
+    """Delete like from the message """
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    liked_msg = Message.query.get_or_404(msg_id)
+    g.user.likes.remove(liked_msg)
+    db.session.commit()
+    return redirect(f"/users/{user_id}/likes")
+
+@app.route('/users/<int:user_id>/likes')
+def show_liked_messages(user_id):
+    """Show liked messages """
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+    return render_template(f"/users/likes.html", messages=g.user.likes, user=g.user)
 
 ##############################################################################
 # Homepage and error pages
