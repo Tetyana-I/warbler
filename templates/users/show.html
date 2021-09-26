@@ -6,11 +6,24 @@
       {% for message in messages %}
 
         <li class="list-group-item">
-          <a href="/messages/{{ message.id }}" class="message-link"/>
+          <a href="/messages/{{ message.id }}" class="message-link">
 
           <a href="/users/{{ user.id }}">
             <img src="{{ user.image_url }}" alt="user image" class="timeline-image">
           </a>
+
+          <!-- added message deletion -->
+          {% if message.user.id == session["curr_user"]  %}
+            <form method="POST" action="/messages/{{ message.id }}/delete" id="messages-form">
+              <button class="
+                btn 
+                btn-sm 
+                btn-outline-danger"
+                >
+                <i class="far fa-trash-alt"></i> 
+              </button>
+            </form>
+          {% endif %}
 
           <div class="message-area">
             <a href="/users/{{ user.id }}">@{{ user.username }}</a>

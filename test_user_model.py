@@ -7,8 +7,6 @@
 
 import os
 from unittest import TestCase
-from flask_bcrypt import Bcrypt
-bcrypt = Bcrypt()
 
 
 from models import db, User, Message, Follows
@@ -33,7 +31,7 @@ db.create_all()
 
 
 class UserModelTestCase(TestCase):
-    """Test views for messages."""
+    """Tests for user model."""
 
     def setUp(self):
         """Create test client, add sample data."""
@@ -42,19 +40,6 @@ class UserModelTestCase(TestCase):
         Message.query.delete()
         Follows.query.delete()
         
-        # u = User(
-        #     email="test@testagain.com",
-        #     username="testuseruniversal",
-        #     password="HASHED_PASSWORD"
-
-        # )
-
-        # db.session.add(u)
-        # db.session.commit()
-
-
-        # self.client = app.test_client()
-    
     def tearDown(self):
         """Clean up any fouled transaction."""
 

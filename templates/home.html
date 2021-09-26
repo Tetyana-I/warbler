@@ -58,6 +58,18 @@
               <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
               <p>{{ msg.text }}</p>
             </div>
+            <!-- added message deletion -->
+            {% if msg.user.id == session["curr_user"]  %}
+            <form method="POST" action="/messages/{{ msg.id }}/delete" id="messages-form">
+              <button class="
+                btn 
+                btn-sm 
+                btn-outline-danger"
+                >
+                  <i class="far fa-trash-alt"></i> 
+              </button>
+            </form>
+            {% endif %}
             <!-- added check if the messages are user's messages -->
             {% if (msg.user.id != session["curr_user"]) and g.user.is_liked_message(msg) %}
               <form method="POST" action="/users/{{ g.user.id }}/delete_like/{{ msg.id }}" id="messages-form">
