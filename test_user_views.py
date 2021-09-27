@@ -8,7 +8,7 @@
 import os
 from unittest import TestCase
 
-from models import db, Message, User, Follows
+from models import db, Message, User, Follows, Likes
 
 # BEFORE we import our app, let's set an environmental variable
 # to use a different database for tests (we need to do this
@@ -53,53 +53,98 @@ class UserViewTestCase(TestCase):
                                     bio=None,
                                     location=None)
 
-        db.session.commit()
-
-    def test_show_following_for_logged_user(self):
-        """When you’re logged in, can you see the following pages for any user?"""
-
-        # Since we need to change the session to mimic logging in,
-        # we need to use the changing-session trick:
-
-        with self.client as c:
-            with c.session_transaction() as sess:
-                sess[CURR_USER_KEY] = self.testuser.id
-
-            # Now, that session setting is saved, so we can have
-            # the rest of ours test
-                being_followed_user = User(username="followed_user",
-                                    email="test1@test.com",
+        self.user2 = User.signup(username="testuser2",
+                                    email="test2@test.com",
                                     password="testuser",
                                     image_url=None,
                                     header_image_url=None,
                                     bio=None,
                                     location=None)
-                db.session.add(being_followed_user)
-                db.session.commit()
-                f = Follows(user_being_followed_id = being_followed_user.id, user_following_id = sess[CURR_USER_KEY])
-                db.session.add(f)
-                db.session.commit()
-                resp = c.get(f"/users/{self.testuser.id}/following")
-                html = resp.get_data(as_text=True)
 
-                self.assertEqual(resp.status_code, 200)
-                # self.assertIn("<p>@{{ being_followed_user.username }}</p>", html)
+        self.user3 = User.signup(username="testuser3",
+                                    email="test3@test.com",
+                                    password="testuser",
+                                    image_url=None,
+                                    header_image_url=None,
+                                    bio=None,
+                                    location=None)
+        db.session.commit()
 
-    # def test_not_show_following_for_not_logged_user(self):
-    #     """When you’re logged out, are you disallowed from visiting a user’s follower / following pages?"""  
-    #     with app.test_client() as client: 
-    #         # test redirection
-    #         res = client.get(f"/users/{self.testuser.id}/following")     
-    #         self.assertEqual(res.status_code, 302)
-    #         self.assertEqual(res.location, "http://localhost/")
+
+    def tearDowm(self):
+        """Clean up any fouled transaction."""
+        db.session.rollback()
+
+
+    def test_user_index(self):
+        """ test list of all users """
+        with self.client as client:
+            resp = client.get("/users")
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("<p>@testuser</p>", html)
+            self.assertIn("<p>@testuser2</p>", html)
+
+
+    def test_user_show(self):
+        """ test showing user details page """
+        with self.client as client:
+            resp = client.get(f"/users/{self.testuser.id}")
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("@testuser", str(resp.data))
+            self.assertNotIn("@testuser2", str(resp.data))
+
+
+    def test_add_likes(self):
+        """ test adding likes to a message """
+        m = Message(text="warble to like", user_id=self.user2.id)
+        db.session.add(m)
+        db.session.commit()
+        path = f"/users/{self.testuser.id}/add_like/{m.id}"
+       
+        with self.client as cl: 
+            with cl.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+            resp = cl.post(path, data={'user_id': self.testuser.id, 'msg_id': m.id}, follow_redirects=True)
+            self.assertEqual(resp.status_code, 200) 
+            html = resp.get_data(as_text=True)
             
+            # check liked message
+            self.assertIn('warble to like', html)
             
-            # test redirection to correct homepage
-                       
-            # html = res.get_data(as_text=True)
-            # self.assertEqual(res.status_code, 200)
-            # self.assertIn("<h1>What's Happening?</h1>", html)
+            # check added like
+            self.assertIn(f'<a href="/users/{self.testuser.id}/likes">1</a>', html)
 
+
+    def test_not_show_following_for_not_loggedin_user(self):
+        """When you’re logged out, are you disallowed from visiting a user’s follower / following pages?"""  
+        with self.client as client: 
+            res = client.get(f"/users/{self.testuser.id}/following")     
+            self.assertEqual(res.status_code, 302)
+            self.assertEqual(res.location, "http://localhost/")
+
+            res = client.get(f"/users/{self.testuser.id}/following", follow_redirects=True)  
+            html = res.get_data(as_text=True)
+            self.assertEqual(res.status_code, 200)
+            self.assertIn('Access unauthorized', html)
+
+
+    def test_show_following(self):
+        """ test show followed users """
+        
+        f1 = Follows(user_being_followed_id=self.user3.id, user_following_id=self.testuser.id)
+        db.session.add(f1)
+        db.session.commit()
+        
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+
+            resp = c.get(f"/users/{self.testuser.id}/following")
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("@testuser3", str(resp.data))
+            self.assertNotIn("@testuser2", str(resp.data))
 
 
 

@@ -169,7 +169,6 @@ class UserModelTestCase(TestCase):
 
         self.assertFalse(User.authenticate(username='testuser', password='testpassword'))
 
-        # Does User.authenticate successfully return a user when given a valid username and password?
-        # self.assertIsInstance(User.authenticate(username='testuser6_1', password='testpassword'), User)
+
 
           
